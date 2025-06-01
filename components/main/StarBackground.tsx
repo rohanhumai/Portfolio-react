@@ -1,17 +1,26 @@
 "use client";
 
-import React, { useState, useRef, Suspense } from "react";
+import React, { useState, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Points, PointMaterial, Preload } from "@react-three/drei";
 import { inSphere } from "maath/random";
 import * as THREE from "three";
 
-const StarBackground = (props: any) => {
+const StarBackground = () => {
   const ref = useRef<THREE.Group>(null!);
-  const [sphere] = useState(() =>
-  inSphere(new Float32Array(15000), { radius: 1.2 })
-);
 
+  // Generate positions only once
+  const [positions] = useState(() =>
+    inSphere(new Float32Array(15000), { radius: 1.2 })
+  );
+
+  // Memoize the BufferAttribute to avoid recreating on each render
+  const positionAttribute = useMemo(
+    () => new THREE.BufferAttribute(positions, 3),
+    [positions]
+  );
+
+  // Animate the group rotation
   useFrame((_, delta) => {
     if (ref.current) {
       ref.current.rotation.x -= delta / 10;
@@ -21,7 +30,10 @@ const StarBackground = (props: any) => {
 
   return (
     <group ref={ref} rotation={[0, 0, Math.PI / 4]}>
-      <Points positions={sphere} stride={3} frustumCulled {...props}>
+      <Points frustumCulled>
+        <bufferGeometry>
+          <primitive attach="attributes-position" object={positionAttribute} />
+        </bufferGeometry>
         <PointMaterial
           transparent
           color="#ffffff"
